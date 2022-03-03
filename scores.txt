@@ -1,0 +1,4 @@
+username,score
+RJ,500187
+Karlo,260197
+Rit,257176
