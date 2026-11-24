@@ -1,6 +1,9 @@
 from os import stat
+import os
 import sys
-sys.path.append('code/')
+sys.path.append(os.path.join(getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__))), "code"))
+from paths import BASE_DIR
+os.chdir(BASE_DIR)  # assets are loaded with paths relative to the project root
 from inGame import inGame
 from endLevel import endLevel
 from endGameCredits import endGameCredits

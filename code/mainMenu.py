@@ -3,6 +3,8 @@ import pandas as pd
 from pygame.locals import *
 import sys
 
+from paths import SCORES_FILE
+
 # pygame settings
 clock = pg.time.Clock()
 pg.init()
@@ -263,7 +265,7 @@ def leaderboard(topn=10):
     """Runs Leaderboard menu page"""
     
     running = True
-    filename = "scores.txt"
+    filename = SCORES_FILE
     font_content = pg.font.Font('code/assets/fonts/BakbakOne-Regular.ttf', 24) 
     
     # reads the scores file
