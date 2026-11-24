@@ -8,6 +8,8 @@ import pandas as pd
 import pickle
 import time
 
+from paths import SCORES_FILE
+
 pg.init()
 
 width, height = 800, 600
@@ -27,10 +29,7 @@ def addHighscore(cum_score):
     WHITE = (255, 255, 255)
 
     ## Pandas option
-    filename = "scores.txt"
-    if filename not in os.listdir('code'):
-        with open(filename, "w") as f:
-            f.write("username,score")
+    filename = SCORES_FILE
         
     highscores = pd.read_csv(filename, header=0)
 
@@ -57,7 +56,7 @@ def addHighscore(cum_score):
                     highscores = pd.concat([highscores, pd.DataFrame([[username, score]], columns=["username", "score"])], axis=0)
                     highscores.sort_values("score", ascending=False, inplace=True)                
                     highscores = highscores.iloc[0:n, :]   
-                    highscores.to_csv("scores.txt", index=False) 
+                    highscores.to_csv(filename, index=False) 
                     return "endGame"
                 else:
                     if len(username) < max_character:

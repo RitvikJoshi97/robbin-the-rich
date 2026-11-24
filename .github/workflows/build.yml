@@ -1,0 +1,97 @@
+name: Build and release
+
+# Every push and pull request builds the game for macOS, Windows and Linux.
+# Pushing a version tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`)
+# also publishes a GitHub Release with the downloads attached.
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS (Apple silicon)
+            os: macos-latest
+            artifact: Robbin-The-Rich-macOS-AppleSilicon.zip
+          - name: macOS (Intel)
+            os: macos-15-intel
+            artifact: Robbin-The-Rich-macOS-Intel.zip
+          - name: Windows
+            os: windows-latest
+            artifact: Robbin-The-Rich-Windows-x64
+          - name: Linux
+            os: ubuntu-24.04
+            artifact: Robbin-The-Rich-Linux-x64.tar.gz
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller pillow
+
+      - name: Build
+        run: pyinstaller --noconfirm --distpath out RobbinTheRich.spec
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          VERSION="${GITHUB_REF_NAME#v}"
+          [[ "$GITHUB_REF" == refs/tags/v* ]] || VERSION="0.0.0"
+          case "${{ runner.os }}" in
+            macOS)
+              ditto -c -k --keepParent "out/Robbin The Rich.app" "dist/${{ matrix.artifact }}"
+              ;;
+            Windows)
+              python -c "from PIL import Image; Image.open('code/assets/images/icon.png').save('out/icon.ico', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])"
+              (cd out && 7z a "../dist/${{ matrix.artifact }}-portable.zip" RobbinTheRich)
+              ISCC="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+              [ -f "$ISCC" ] || choco install innosetup -y --no-progress
+              "$ISCC" "//DAppVersion=${VERSION}" packaging/windows-installer.iss
+              ;;
+            Linux)
+              tar -C out -czf "dist/${{ matrix.artifact }}" RobbinTheRich
+              ;;
+          esac
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
